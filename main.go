@@ -1,3 +1,5 @@
+
+
 package main
 import(
 	"fmt"
@@ -9,22 +11,22 @@ func main() {
 		os.Exit(1)
 	}
 
-		inputFile := os.Args[1]
-		outputFile := os.Args[2]
+	inputFile := os.Args[1]
+	outputFile := os.Args[2]
 
-		content, err := os.ReadFile(inputFile)
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
+	content, err := os.ReadFile(inputFile)
+	if err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
 
-		text := string(content)
-		result := process(text)
+	text := string(content)
+	result := fixAAn(fixPunct(process(text)))
 
-		err = os.WriteFile(outputFile, []byte(result), 0644)
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
-	
+	err = os.WriteFile(outputFile, []byte(result), 0644)
+	if err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
 }
+

@@ -1,1 +1,5 @@
-Punctuation tests are ... kinda boring , what do you think ?
+It was a amazing day .
+There is a honest man .
+I saw a elephant .
+A apple is red .
+Hello , world !

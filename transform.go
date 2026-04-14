@@ -1,64 +1,107 @@
 package main
-
-import (
-	"strconv"
+import(
 	"strings"
+	"strconv"
 )
 func process(text string) string {
 	words := strings.Fields(text)
-	words = joinTags(words)
 	result := []string{}
 
-	for _, word := range words {
-			if word == "(up)" {
-				result[len(result)-1] = toUpper(result[len(result)-1])
+	insideQuote := false
+	justOpened := false
+	justClosed := false
 
-			}else if word == "(low)" {
-				result[len(result)-1] = toLower(result[len(result)-1])
 
-			}else if word == "(cap)" {
-				result[len(result)-1] = capitalize(result[len(result)-1])
+	for i := 0; i < len(words); i++ {
+		word := words[i]
 
-			}else if strings.HasPrefix(word, "(up,") {
-				count := getCount(word)
-				for i := len(result) - count; i < len(result); i++ {
-					result[i] = toUpper(result[i])
-				}
-			}else if strings.HasPrefix(word, "(low,") {
-				count := getCount(word)
-				for i := len(result) - count; i < len(result); i++ {
-					result[i] = toLower(result[i])
-				}
-			}else if strings.HasPrefix(word, "(cap,") {
-				count := getCount(word)
-				for i := len(result) - count; i < len(result); i++ {
-					result[i] = capitalize(result[i])
-			}			
-			
-			}else if word == "(hex)" {
-				converted, err := fromHex(result[len(result)-1])
-				if err == nil {
-					result[len(result)-1] = converted
-				} 
+		if word == "'" {
+    insideQuote = !insideQuote
 
-			}else if word == "(bin)" {
-				converted, err := fromBin(result[len(result)-1])
-				if err == nil {
-					result[len(result)-1] = converted
-				}
-			}else{
-				result = append(result, word)
-			}
-			
+	if insideQuote {
+		justOpened = true
+	}else{
+		justClosed = true
+	}
+	continue
 		}
-		result = fixPunctuation(result)
-		result = fixArticles(result)
-		return strings.Join(result, " ")
-		
 
 
-	
-}
+		if word == "(up)" && len(result) > 0 {
+			result[len(result)-1] = toUpper(result[len(result)-1])
+			continue
+			}
+
+			if word == "(low)" && len(result) > 0 {
+				result[len(result)-1] = toLower(result[len(result)-1])
+				continue
+				}
+
+				if word == "(cap)" && len(result) > 0 {
+					result[len(result)-1] = capitalize(result[len(result)-1])
+					continue
+					}
+
+					if strings.HasPrefix(word, "(up,") { 
+					numstr := strings.TrimSuffix(strings.TrimPrefix(word, "(up,"), ")")
+					n, _ := strconv.Atoi(strings.TrimSpace(numstr))
+
+					for j := 1; j <= n && len(result)-j >= 0; j++ {
+						result[len(result)-j] = toUpper(result[len(result)-j]) 
+					}
+					continue
+					}
+
+					if strings.HasPrefix(word, "(low,") {
+						numstr := strings.TrimSuffix(strings.TrimPrefix(word, "(low,"), ")") 
+						n, _ := strconv.Atoi(strings.TrimSpace(numstr))
+
+						for j := 1; j <= n && len(result)-j >= 0; j++ {
+							result[len(result)-j] = toLower(result[len(result)-j])
+						}
+						continue
+					}
+
+					if strings.HasPrefix(word, "(cap,") {
+						numstr := strings.TrimSuffix(strings.TrimPrefix(word, "(cap,"), ")")
+						n, _ := strconv.Atoi(strings.TrimSpace(numstr))
+
+						for j := 1; j <= n && len(result)-j >= 0; j++ {
+							result[len(result)-j] = capitalize(result[len(result)-j])
+						}
+						continue
+					}
+
+					if word == "(hex)" && len(result) > 0 {
+					converted, err := fromHex(result[len(result)-1])
+					if err == nil {
+						result[len(result)-1] = converted
+					}
+					continue
+					}
+					if word == "(bin)" && len(result) > 0 {
+						converted, err := fromBin(result[len(result)-1])
+						if err == nil {
+							result[len(result)-1] = converted
+						}
+						continue
+					}
+
+					if justOpened {
+						word = "'" + word
+						justOpened = false
+					}
+
+
+					result = append(result, word)
+
+					if justClosed && len(result) > 0 {
+						result[len(result)-1] = result[len(result)-1] + "'"
+						justClosed = false
+					}
+				}
+				return strings.Join(result, " ")
+			}
 func toUpper(s string) string {
 	return strings.ToUpper(s)
 }
@@ -66,80 +109,70 @@ func toLower(s string) string {
 	return strings.ToLower(s)
 }
 func capitalize(s string) string {
+	if len(s) == 0 {
+		return s
+	}
 	return strings.ToUpper(s[:1]) + strings.ToLower(s[1:])
 }
 func fromHex(s string) (string, error) {
-result, err := strconv.ParseInt(s, 16,64)
-if err != nil {
-	return "", err
-}
-return strconv.Itoa(int(result)), nil
+	result, err := strconv.ParseInt(s, 16, 64)
+	if err != nil {
+		return "", err
+	}
+	return strconv.Itoa(int(result)), nil
 }
 func fromBin(s string) (string, error) {
-	result, err := strconv.ParseInt(s, 2,64)
+	result, err := strconv.ParseInt(s, 2, 64)
 	if err != nil {
 		return "", err
 	}
 	return strconv.Itoa(int(result)), nil
 }
 
+func fixPunct(s string) string {
 
-func getCount(tag string) int {
-	word := strings.Split(tag, ",")
-	cleaned := strings.Trim(strings.TrimSpace(word[1]),")")
-	n, err := strconv.Atoi(cleaned)
-	if err != nil || n < 1{
-		return 1
-	}
-	return n
-}
+	s = strings.ReplaceAll(s, " .", ".")
+	s = strings.ReplaceAll(s, " ,", ",")
+	s = strings.ReplaceAll(s, " !", "!")
+	s = strings.ReplaceAll(s, " ;", ";")
+	s = strings.ReplaceAll(s, " :", ":")
+	s = strings.ReplaceAll(s, " ?", "?")
 
-func joinTags(words []string) []string {
+	words := strings.Fields(s)
 	result := []string{}
-	
-	for i := 0; i < len(words); i++ {
-		if strings.HasPrefix(words[i], "(") && strings.HasSuffix(words[i], ",") && i+1 < len(words) {
-		result = append(result, words[i]+words[i+1])
-		i++
-		}else{
-			result = append(result, words[i])
-		}
 
-	}
-	return result
-}
-
-func fixPunctuation(words []string) []string {
-	result := []string{}
 	for _, word := range words {
-		if strings.Trim(word, ".,!?:;") == "" {
+		if (word == "." || word == "," || word == "!" || word == ":" || word == ";" || word == "?") && len(result) > 0 {
 			result[len(result)-1] = result[len(result)-1] + word
 		}else{
 			result = append(result, word)
 		}
 
+	}
+	return strings.Join(result, " ")
+}
+
+func fixAAn(s string) string {
+	words := strings.Fields(s)
+
+	for i := 0; i < len(words) -1; i++ {
+		if strings.ToLower(words[i]) == "a" {
+			nextWord := strings.ToLower(words[i+1])
+
+			if len(nextWord) > 0 {
+				firstLetter := nextWord[0]
+				if firstLetter == 'a' || firstLetter == 'e' || firstLetter == 'i' || firstLetter == 'o' || firstLetter == 'u' || firstLetter == 'h' {
+					if words[i] == "A" {
+						words[i] = "An"
+					}else{
+						words[i] = "an"
+					}
+
+				}
+			}
+		}
 
 	}
-	return result
 
-}
-
-func fixArticles(words []string) []string {
-	result := []string{}
-	for i, word := range words {
-		if (word == "a" || word == "A") && i+1 < len(words) && strings.ContainsAny(words[i+1][:1], "aeiouAEIOUhH") {
-			if word == "a" {
-				word = "an"
-
-		}else{
-			word = "An"
-			
-		}
-		result = append(result, word)
-
-	}else{
-	result = append(result, word)
-}
-}
-return result
+	return strings.Join(words, " ")
 }
